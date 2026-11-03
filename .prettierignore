@@ -1,0 +1,9 @@
+node_modules
+.next
+dist
+drizzle
+docs
+examples
+*.md
+package-lock.json
+schema/codereviewer.schema.json
