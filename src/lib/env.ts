@@ -33,6 +33,14 @@ const schema = z.object({
   NEXORA_SYNC_SECRET: optional,
   NEXORA_CONSOLE_URL: z.url().default("https://console.onenexora.com"),
 
+  // NEXORA sign-in (Clerk, the same instance as the other NEXORA apps). Off until both keys are set.
+  // Read at runtime and passed to Clerk explicitly, so one image serves any deployment.
+  CLERK_SECRET_KEY: optional,
+  CLERK_PUBLISHABLE_KEY: optional,
+  NEXORA_ACCOUNT_URL: z.url().default("https://account.onenexora.com"),
+  // "off" hides GitHub sign-in once everyone uses NEXORA sign-in. Linking still uses GitHub OAuth.
+  GITHUB_SIGNIN: z.enum(["on", "off"]).default("on"),
+
   WORKER_CONCURRENCY: z.coerce.number().int().min(1).max(32).default(3),
 });
 
@@ -117,6 +125,18 @@ export type NexoraConfig = { syncSecret: string; consoleUrl: string };
 export function nexora(e: Env = env()): NexoraConfig | null {
   if (!e.NEXORA_SYNC_SECRET) return null;
   return { syncSecret: e.NEXORA_SYNC_SECRET, consoleUrl: e.NEXORA_CONSOLE_URL.replace(/\/$/, "") };
+}
+
+export type ClerkConfig = { secretKey: string; publishableKey: string; accountUrl: string };
+
+/** NEXORA sign-in through Clerk. Null until both keys are set. */
+export function clerk(e: Env = env()): ClerkConfig | null {
+  if (!e.CLERK_SECRET_KEY || !e.CLERK_PUBLISHABLE_KEY) return null;
+  return {
+    secretKey: e.CLERK_SECRET_KEY,
+    publishableKey: e.CLERK_PUBLISHABLE_KEY,
+    accountUrl: e.NEXORA_ACCOUNT_URL.replace(/\/$/, ""),
+  };
 }
 
 /** Plans and quotas apply when either CodeReviewer's own Stripe billing or NEXORA billing is on. */

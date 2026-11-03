@@ -30,6 +30,8 @@ export function canLink(
   user: Pick<User, "githubId">,
   account: Pick<Account, "githubAccountId" | "installerGithubId">,
 ): boolean {
+  // A NEXORA sign-in has no GitHub id; null must never match an unrecorded installer.
+  if (user.githubId === null) return false;
   return user.githubId === account.githubAccountId || user.githubId === account.installerGithubId;
 }
 
@@ -136,12 +138,13 @@ export async function completeLink(
   return { ok: true, account: linked! };
 }
 
-export async function unlink(user: User, account: Account): Promise<boolean> {
-  if (!account.nexoraOrgId || !canLink(user, account)) return false;
+/** Remove the link. The caller checks who may (canLink, or an admin of the organisation). */
+export async function unlink(account: Account, by: User): Promise<boolean> {
+  if (!account.nexoraOrgId) return false;
   await db()
     .update(accounts)
     .set({ nexoraOrgId: null, nexoraOrgName: null })
     .where(and(eq(accounts.id, account.id), eq(accounts.nexoraOrgId, account.nexoraOrgId)));
-  console.info(`[nexora] unlinked ${account.login} from ${account.nexoraOrgId} by ${user.login}`);
+  console.info(`[nexora] unlinked ${account.login} from ${account.nexoraOrgId} by ${by.login}`);
   return true;
 }

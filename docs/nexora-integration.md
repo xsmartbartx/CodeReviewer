@@ -49,9 +49,21 @@ workflow (`/api/health`) and the Control Center, and runs it like its other prod
 
 ## Phase 3: NEXORA sign-in
 
-- Clerk on the shared NEXORA instance, next to GitHub sign-in, off until `CLERK_SECRET_KEY` and
-  `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` are set.
-- Someone signed in with Clerk sees the accounts linked to their active organisation. Admins
-  link, unlink and manage billing. Someone signed in with GitHub sees what GitHub lists for them,
-  as today.
-- **Rollback:** unset the Clerk keys.
+| Variable                | Purpose                                                                           |
+| ----------------------- | --------------------------------------------------------------------------------- |
+| `CLERK_SECRET_KEY`      | The NEXORA Clerk instance's secret key. With the publishable key, turns phase 3 on |
+| `CLERK_PUBLISHABLE_KEY` | Its publishable key (`pk_live_...`), read at runtime                              |
+| `NEXORA_ACCOUNT_URL`    | Where people sign in and pick an organisation. Default NEXORA's account app       |
+| `GITHUB_SIGNIN`         | `off` hides GitHub sign-in once everyone uses NEXORA. Default `on`                |
+
+- Clerk on the shared NEXORA instance (`clerk.onenexora.com`), next to GitHub sign-in. It runs
+  server-side only (`src/proxy.ts`): no Clerk script in the browser, and Clerk's handshake
+  redirect refreshes an expired session. Only tokens for this app's origin are accepted.
+- Someone signed in with NEXORA sees exactly the accounts linked to their active organisation.
+  Admins of it manage billing and can unlink; members can see reviews and toggle repositories.
+  Someone signed in with GitHub sees what GitHub lists for them, as today. A GitHub session wins
+  when both exist (linking needs one), and signing out ends it first.
+- Signing out of a NEXORA-only session ends it everywhere (one session across NEXORA apps).
+- Linking stays as in phase 2: it always needs the GitHub sign-in by the owner or installer.
+- **Rollback:** unset the Clerk keys. Everyone is back on GitHub sign-in; the added
+  `users.clerk_user_id` column stays unused.

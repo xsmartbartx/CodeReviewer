@@ -29,6 +29,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.4.0",
+    "@clerk/nextjs": "^7.9.22",
     "@octokit/webhooks-methods": "^6.0.0",
     "drizzle-orm": "^0.45.4",
     "next": "16.4.4",
