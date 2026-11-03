@@ -1,0 +1,63 @@
+import { z } from "zod";
+
+const optional = z
+  .string()
+  .optional()
+  .transform((v) => (v && v.trim() !== "" ? v : undefined));
+
+const schema = z.object({
+  NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+  APP_URL: z.url().default("http://localhost:3000"),
+  DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
+
+  GITHUB_APP_ID: z.string().min(1),
+  GITHUB_APP_SLUG: z.string().min(1),
+  // PEM contents. Newlines may be escaped as \n so the key fits on one env line.
+  GITHUB_APP_PRIVATE_KEY: z
+    .string()
+    .min(1)
+    .transform((v) => v.replace(/\\n/g, "\n")),
+  GITHUB_WEBHOOK_SECRET: z.string().min(1),
+  GITHUB_CLIENT_ID: z.string().min(1),
+  GITHUB_CLIENT_SECRET: z.string().min(1),
+
+  ANTHROPIC_API_KEY: optional,
+  ANTHROPIC_MODEL: z.string().default("claude-opus-5-5"),
+  ANTHROPIC_EFFORT: z.enum(["low", "medium", "high", "xhigh", "max"]).default("medium"),
+
+  STRIPE_SECRET_KEY: optional,
+  STRIPE_WEBHOOK_SECRET: optional,
+  STRIPE_PRICE_PRO: optional,
+  STRIPE_PRICE_TEAM: optional,
+
+  WORKER_CONCURRENCY: z.coerce.number().int().min(1).max(32).default(3),
+});
+
+export type Env = z.infer<typeof schema>;
+
+let cached: Env | undefined;
+
+/**
+ * Parsed, validated environment. Parsed lazily so `next build` works without
+ * runtime secrets; the first request or worker start fails loudly instead.
+ */
+export function env(): Env {
+  if (!cached) {
+    const result = schema.safeParse(process.env);
+    if (!result.success) {
+      const issues = result.error.issues.map((i) => `  - ${i.path.join(".")}: ${i.message}`).join("\n");
+      throw new Error(`Invalid environment configuration:\n${issues}`);
+    }
+    cached = result.data;
+  }
+  return cached;
+}
+
+export function resetEnvForTesting() {
+  cached = undefined;
+}
+
+/** Billing is on only when every Stripe variable is present. Self-hosters can leave it off. */
+export function billingEnabled(e: Env = env()): boolean {
+  return Boolean(e.STRIPE_SECRET_KEY && e.STRIPE_WEBHOOK_SECRET && e.STRIPE_PRICE_PRO && e.STRIPE_PRICE_TEAM);
+}

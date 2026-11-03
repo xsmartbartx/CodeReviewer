@@ -1,0 +1,44 @@
+# CodeReviewer reviewing itself.
+# Every field is optional; delete what you do not need.
+
+language: en-US
+
+# quiet: critical and major only. chill: adds minor findings. assertive: adds nits.
+profile: chill
+
+instructions: |
+  Prefer early returns over nested conditionals.
+  Public functions need a doc comment explaining behaviour, not restating the name.
+
+auto_review:
+  enabled: true
+  drafts: false
+  incremental: true
+  base_branches: ["main", "release/*"]
+  ignore_title_keywords: ["WIP", "[skip review]"]
+  ignore_authors: ["dependabot[bot]", "renovate[bot]"]
+
+# Start advisory. Turn this on once the team trusts the signal, then require the
+# CodeReviewer check in branch protection.
+request_changes: false
+
+summary: true
+walkthrough: true
+max_comments: 25
+
+path_filters:
+  - "!**/__generated__/**"
+  - "!**/*.pb.ts"
+  - "!docs/**"
+
+path_instructions:
+  - path: "src/api/**"
+    instructions: >
+      Every handler must authenticate the caller and check permissions before reading
+      or writing data. Flag any query built by string concatenation.
+  - path: "**/migrations/**"
+    instructions: >
+      Flag migrations that lock large tables, drop columns still read by the previous
+      release, or cannot be rolled back.
+  - path: "**/*.test.*"
+    instructions: Only flag tests that cannot fail or that test the mock instead of the code.

@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "language": {
+      "default": "en-US",
+      "description": "Language for review comments, e.g. en-US or pl-PL",
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 35
+    },
+    "profile": {
+      "default": "chill",
+      "description": "quiet: critical and major only. chill: adds minor. assertive: adds nits",
+      "type": "string",
+      "enum": [
+        "quiet",
+        "chill",
+        "assertive"
+      ]
+    },
+    "instructions": {
+      "default": "",
+      "description": "Team-wide guidance included in every review",
+      "type": "string",
+      "maxLength": 4000
+    },
+    "auto_review": {
+      "default": {
+        "enabled": true,
+        "drafts": false,
+        "incremental": true,
+        "base_branches": [],
+        "ignore_title_keywords": [
+          "WIP",
+          "DO NOT REVIEW",
+          "[skip review]"
+        ],
+        "ignore_authors": [
+          "dependabot[bot]",
+          "renovate[bot]"
+        ]
+      },
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "default": true,
+          "description": "Review automatically when a pull request is opened or updated",
+          "type": "boolean"
+        },
+        "drafts": {
+          "default": false,
+          "description": "Also review draft pull requests",
+          "type": "boolean"
+        },
+        "incremental": {
+          "default": true,
+          "description": "Review only the commits pushed since the last review",
+          "type": "boolean"
+        },
+        "base_branches": {
+          "default": [],
+          "description": "Globs for base branches to review. Empty means every branch",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "ignore_title_keywords": {
+          "default": [
+            "WIP",
+            "DO NOT REVIEW",
+            "[skip review]"
+          ],
+          "description": "Skip pull requests whose title contains any of these (case-insensitive)",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "ignore_authors": {
+          "default": [
+            "dependabot[bot]",
+            "renovate[bot]"
+          ],
+          "description": "Skip pull requests opened by these GitHub users",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "request_changes": {
+      "default": false,
+      "description": "Request changes and fail the check when a critical or major finding is posted",
+      "type": "boolean"
+    },
+    "summary": {
+      "default": true,
+      "description": "Post a high-level summary in the review body",
+      "type": "boolean"
+    },
+    "walkthrough": {
+      "default": true,
+      "description": "Add a per-file walkthrough table to the review body",
+      "type": "boolean"
+    },
+    "max_comments": {
+      "default": 25,
+      "description": "Maximum inline comments per review",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "path_filters": {
+      "default": [],
+      "description": "Globs to include; prefix with \"!\" to exclude. Built-in exclusions always apply",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "path_instructions": {
+      "default": [],
+      "description": "Extra review rules for matching paths",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Glob matched against file paths, e.g. src/api/**"
+          },
+          "instructions": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000,
+            "description": "Review guidance for matching files"
+          }
+        },
+        "required": [
+          "path",
+          "instructions"
+        ]
+      }
+    }
+  },
+  "additionalProperties": false,
+  "title": "CodeReviewer configuration (.codereviewer.yaml)"
+}

@@ -1,25 +1,7 @@
 # License
 
-## This repository's own content
+Copyright (c) 2026 MiejskiSurfer. All rights reserved.
 
-The curated lists, documentation in [`docs/`](docs/), configuration examples in [`configs/`](configs/), and the schema in [`schema/`](schema/) are released under **CC0 1.0 Universal** — dedicated to the public domain.
+This software and its source code are proprietary. No permission is granted to use, copy, modify, distribute, sublicense, or sell copies of the software, in whole or in part, without prior written permission from the copyright holder.
 
-You may copy, modify, distribute, and use any of it, for any purpose, commercial or not, with no attribution required. Copying a configuration example into your own repository requires no notice, no credit, and no permission.
-
-Full text: <https://creativecommons.org/publicdomain/zero/1.0/legalcode>
-
-To apply CC0 in a fork, add the standard `LICENSE` file containing the full legal text alongside this summary.
-
-## Linked resources
-
-Every linked resource belongs to its author or publisher and is governed by its own license and terms. A link in this repository is a pointer, not a grant of rights, and confers no permission to reproduce the linked content.
-
-## Trademarks
-
-CodeRabbit and the CodeRabbit logo are trademarks of their respective owner. This project is **unofficial and community-maintained**, is not affiliated with, endorsed by, or sponsored by CodeRabbit, and uses the name only to identify the software it documents.
-
-The vendor maintains its own list at [coderabbitai/awesome-coderabbit](https://github.com/coderabbitai/awesome-coderabbit).
-
-## No warranty
-
-Content is provided as-is. Configuration examples are validated for structural correctness, not for suitability to your codebase, your security requirements, or your compliance obligations. Review any configuration before committing it to a repository you care about.
+The archived material in `docs/legacy/` and the example files in `examples/coderabbit/` were published under CC0 1.0 Universal and remain available under that dedication.
