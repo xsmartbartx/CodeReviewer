@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { LogoMark } from "@/components/logo";
 import { currentUser, safeRedirectPath } from "@/lib/auth/session";
+import { github } from "@/lib/env";
 
 export const metadata = { title: "Sign in" };
 export const dynamic = "force-dynamic";
@@ -12,6 +13,26 @@ export default async function LoginPage({ searchParams }: Props) {
   const { next, error } = await searchParams;
   const destination = safeRedirectPath(next);
   if (await currentUser()) redirect(destination);
+
+  if (!github()) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-zinc-50 px-4 dark:bg-zinc-950">
+        <div className="w-full max-w-sm rounded-2xl border border-zinc-200 bg-white p-8 text-center shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+          <Link href="/" className="inline-flex">
+            <LogoMark className="size-10" />
+          </Link>
+          <h1 className="mt-5 text-xl font-semibold">Sign-in opens soon</h1>
+          <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+            CodeReviewer is not accepting sign-ins yet. Check back shortly, or read the{" "}
+            <Link className="underline" href="/docs">
+              documentation
+            </Link>{" "}
+            in the meantime.
+          </p>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-zinc-50 px-4 dark:bg-zinc-950">

@@ -1,5 +1,5 @@
 import { closeDb } from "@/db";
-import { env } from "@/lib/env";
+import { env, github } from "@/lib/env";
 import { getBoss, REVIEW_QUEUE, stopQueue, type ReviewJob } from "@/lib/queue";
 import { runMaintenance } from "./maintenance";
 import { processReviewJob } from "./process";
@@ -8,7 +8,16 @@ const MAINTENANCE_QUEUE = "maintenance";
 
 async function main() {
   const { WORKER_CONCURRENCY, ANTHROPIC_API_KEY } = env();
-  if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY is required to run the worker.");
+  if (!ANTHROPIC_API_KEY || !github()) {
+    // Stay up instead of crash-looping under the container restart policy; restart once configured.
+    const missing = [!github() && "the six GITHUB_* variables", !ANTHROPIC_API_KEY && "ANTHROPIC_API_KEY"].filter(
+      Boolean,
+    );
+    const message = `[worker] reviews are off until ${missing.join(" and ")} are set; restart the worker after setting them`;
+    console.warn(message);
+    setInterval(() => console.warn(message), 60 * 60 * 1000);
+    return;
+  }
 
   const boss = await getBoss();
   await boss.createQueue(MAINTENANCE_QUEUE);

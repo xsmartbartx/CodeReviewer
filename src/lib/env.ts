@@ -10,16 +10,15 @@ const schema = z.object({
   APP_URL: z.url().default("http://localhost:3000"),
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
 
-  GITHUB_APP_ID: z.string().min(1),
-  GITHUB_APP_SLUG: z.string().min(1),
+  // The GitHub App is optional so the site can run before the app is registered;
+  // sign-in, webhooks, and reviews stay off until all six are set (see github()).
+  GITHUB_APP_ID: optional,
+  GITHUB_APP_SLUG: optional,
   // PEM contents. Newlines may be escaped as \n so the key fits on one env line.
-  GITHUB_APP_PRIVATE_KEY: z
-    .string()
-    .min(1)
-    .transform((v) => v.replace(/\\n/g, "\n")),
-  GITHUB_WEBHOOK_SECRET: z.string().min(1),
-  GITHUB_CLIENT_ID: z.string().min(1),
-  GITHUB_CLIENT_SECRET: z.string().min(1),
+  GITHUB_APP_PRIVATE_KEY: optional.transform((v) => v?.replace(/\\n/g, "\n")),
+  GITHUB_WEBHOOK_SECRET: optional,
+  GITHUB_CLIENT_ID: optional,
+  GITHUB_CLIENT_SECRET: optional,
 
   ANTHROPIC_API_KEY: optional,
   ANTHROPIC_MODEL: z.string().default("claude-opus-5-5"),
@@ -55,6 +54,52 @@ export function env(): Env {
 
 export function resetEnvForTesting() {
   cached = undefined;
+}
+
+export type GitHubConfig = {
+  appId: string;
+  slug: string;
+  privateKey: string;
+  webhookSecret: string;
+  clientId: string;
+  clientSecret: string;
+};
+
+/** The GitHub App credentials, or null until every one of them is set. */
+export function github(e: Env = env()): GitHubConfig | null {
+  const {
+    GITHUB_APP_ID,
+    GITHUB_APP_SLUG,
+    GITHUB_APP_PRIVATE_KEY,
+    GITHUB_WEBHOOK_SECRET,
+    GITHUB_CLIENT_ID,
+    GITHUB_CLIENT_SECRET,
+  } = e;
+  if (
+    !GITHUB_APP_ID ||
+    !GITHUB_APP_SLUG ||
+    !GITHUB_APP_PRIVATE_KEY ||
+    !GITHUB_WEBHOOK_SECRET ||
+    !GITHUB_CLIENT_ID ||
+    !GITHUB_CLIENT_SECRET
+  ) {
+    return null;
+  }
+  return {
+    appId: GITHUB_APP_ID,
+    slug: GITHUB_APP_SLUG,
+    privateKey: GITHUB_APP_PRIVATE_KEY,
+    webhookSecret: GITHUB_WEBHOOK_SECRET,
+    clientId: GITHUB_CLIENT_ID,
+    clientSecret: GITHUB_CLIENT_SECRET,
+  };
+}
+
+/** For code paths that only run once the app is set up (webhooks, signed-in pages, the worker). */
+export function requireGitHub(e: Env = env()): GitHubConfig {
+  const config = github(e);
+  if (!config) throw new Error("The GitHub App is not configured. Set the six GITHUB_* environment variables.");
+  return config;
 }
 
 /** Billing is on only when every Stripe variable is present. Self-hosters can leave it off. */

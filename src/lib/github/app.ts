@@ -1,5 +1,5 @@
 import { App, Octokit, RequestError } from "octokit";
-import { env } from "@/lib/env";
+import { requireGitHub } from "@/lib/env";
 import type { ChangedFile, FileStatus, GitHubPort } from "./port";
 
 export const CHECK_RUN_NAME = "CodeReviewer";
@@ -9,11 +9,11 @@ let app: InstanceType<typeof App> | undefined;
 
 export function githubApp() {
   if (!app) {
-    const e = env();
+    const gh = requireGitHub();
     app = new App({
-      appId: e.GITHUB_APP_ID,
-      privateKey: e.GITHUB_APP_PRIVATE_KEY,
-      oauth: { clientId: e.GITHUB_CLIENT_ID, clientSecret: e.GITHUB_CLIENT_SECRET },
+      appId: gh.appId,
+      privateKey: gh.privateKey,
+      oauth: { clientId: gh.clientId, clientSecret: gh.clientSecret },
     });
   }
   return app;
@@ -22,7 +22,7 @@ export function githubApp() {
 export type InstallationOctokit = Awaited<ReturnType<ReturnType<typeof githubApp>["getInstallationOctokit"]>>;
 
 export function installUrl(): string {
-  return `https://github.com/apps/${env().GITHUB_APP_SLUG}/installations/new`;
+  return `https://github.com/apps/${requireGitHub().slug}/installations/new`;
 }
 
 type RawFile = {
