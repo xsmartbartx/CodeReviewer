@@ -3,7 +3,7 @@ import { FindingSummary, StatusBadge, timeAgo } from "@/components/review-ui";
 import { Badge, Button, ButtonLink, Card, EmptyState, Meter, PageHeader } from "@/components/ui";
 import { effectivePlan } from "@/lib/billing/plans";
 import { recentReviews, reposForAccount, requireAccount } from "@/lib/dashboard";
-import { billingEnabled, env } from "@/lib/env";
+import { billingEnabled, requireGitHub } from "@/lib/env";
 import { installUrl } from "@/lib/github/app";
 import { reviewsUsed } from "@/lib/usage";
 import { setRepositoryEnabled, syncRepositories } from "../actions";
@@ -107,7 +107,7 @@ export default async function AccountPage({ params }: Props) {
       <h2 className="mt-10 mb-4 font-semibold">Recent reviews</h2>
       {reviews.length === 0 ? (
         <EmptyState title="No reviews yet">
-          Open a pull request in an enabled repository, or comment <code>@{env().GITHUB_APP_SLUG} review</code> on an
+          Open a pull request in an enabled repository, or comment <code>@{requireGitHub().slug} review</code> on an
           existing one.
         </EmptyState>
       ) : (

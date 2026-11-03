@@ -72,8 +72,8 @@ stripe listen --forward-to localhost:3000/api/stripe/webhook
 | --- | --- | --- |
 | `APP_URL` | Yes | Public URL, no trailing slash |
 | `DATABASE_URL` | Yes | PostgreSQL 14+ connection string |
-| `GITHUB_APP_ID`, `GITHUB_APP_SLUG`, `GITHUB_APP_PRIVATE_KEY`, `GITHUB_WEBHOOK_SECRET`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | Yes | From step 2 |
-| `ANTHROPIC_API_KEY` | Worker | From step 3 |
+| `GITHUB_APP_ID`, `GITHUB_APP_SLUG`, `GITHUB_APP_PRIVATE_KEY`, `GITHUB_WEBHOOK_SECRET`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | For sign-in and reviews | From step 2. Until all six are set, the public site runs, sign-in shows "opens soon", webhooks return 503, and the worker idles |
+| `ANTHROPIC_API_KEY` | For reviews | From step 3. The worker idles without it |
 | `ANTHROPIC_MODEL`, `ANTHROPIC_EFFORT` | No | Defaults `claude-opus-5-5`, `medium` |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_PRO`, `STRIPE_PRICE_TEAM` | For billing | All four, or none |
 | `WORKER_CONCURRENCY` | No | Reviews per worker process, default 3 |

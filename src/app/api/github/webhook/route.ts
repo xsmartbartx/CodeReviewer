@@ -2,7 +2,7 @@ import { verify } from "@octokit/webhooks-methods";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { webhookDeliveries } from "@/db/schema";
-import { env } from "@/lib/env";
+import { github } from "@/lib/env";
 import { handleWebhook } from "@/lib/github/handlers";
 
 export const runtime = "nodejs";
@@ -14,10 +14,14 @@ export async function POST(request: Request) {
   const event = request.headers.get("x-github-event");
   const deliveryId = request.headers.get("x-github-delivery");
 
+  const gh = github();
+  if (!gh) {
+    return Response.json({ error: "The GitHub App is not configured on this server" }, { status: 503 });
+  }
   if (!signature || !event || !deliveryId) {
     return Response.json({ error: "Missing GitHub headers" }, { status: 400 });
   }
-  const valid = await verify(env().GITHUB_WEBHOOK_SECRET, body, signature).catch(() => false);
+  const valid = await verify(gh.webhookSecret, body, signature).catch(() => false);
   if (!valid) {
     return Response.json({ error: "Invalid signature" }, { status: 401 });
   }

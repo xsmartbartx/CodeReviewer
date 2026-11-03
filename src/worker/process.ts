@@ -2,7 +2,7 @@ import { and, eq, gte } from "drizzle-orm";
 import { db } from "@/db";
 import { accounts, repositories, reviews } from "@/db/schema";
 import { effectivePlan, periodStart } from "@/lib/billing/plans";
-import { billingEnabled, env } from "@/lib/env";
+import { billingEnabled, env, requireGitHub } from "@/lib/env";
 import { repoPort } from "@/lib/github/app";
 import type { GitHubPort } from "@/lib/github/port";
 import type { ReviewJob } from "@/lib/queue";
@@ -30,7 +30,7 @@ export async function processReviewJob(
   deps: ProcessDeps = defaultProcessDeps(),
   jobId?: string,
 ): Promise<ProcessResult> {
-  const { APP_URL, GITHUB_APP_SLUG } = env();
+  const { APP_URL } = env();
   const [account] = await db().select().from(accounts).where(eq(accounts.installationId, job.installationId));
   const [repo] = await db().select().from(repositories).where(eq(repositories.githubRepoId, job.repoGithubId));
   if (!account || account.installationSuspended || !repo || !repo.enabled || !repo.active) {
@@ -109,7 +109,7 @@ export async function processReviewJob(
       {
         github,
         model,
-        slug: GITHUB_APP_SLUG,
+        slug: requireGitHub().slug,
         detailsUrl: `${APP_URL}/dashboard/${account.login}/reviews/${reviewId}`,
       },
     );

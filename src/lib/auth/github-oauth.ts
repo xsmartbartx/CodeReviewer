@@ -2,12 +2,12 @@ import { eq, notInArray, and } from "drizzle-orm";
 import { Octokit } from "octokit";
 import { db } from "@/db";
 import { memberships, users } from "@/db/schema";
-import { env } from "@/lib/env";
+import { env, requireGitHub } from "@/lib/env";
 import { upsertAccount } from "@/lib/github/handlers";
 
 export function authorizeUrl(state: string): string {
   const params = new URLSearchParams({
-    client_id: env().GITHUB_CLIENT_ID,
+    client_id: requireGitHub().clientId,
     redirect_uri: `${env().APP_URL}/api/auth/callback`,
     state,
   });
@@ -19,8 +19,8 @@ export async function exchangeCode(code: string): Promise<string> {
     method: "POST",
     headers: { Accept: "application/json", "Content-Type": "application/json" },
     body: JSON.stringify({
-      client_id: env().GITHUB_CLIENT_ID,
-      client_secret: env().GITHUB_CLIENT_SECRET,
+      client_id: requireGitHub().clientId,
+      client_secret: requireGitHub().clientSecret,
       code,
       redirect_uri: `${env().APP_URL}/api/auth/callback`,
     }),

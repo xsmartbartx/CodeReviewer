@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { accounts, repositories } from "@/db/schema";
-import { env } from "@/lib/env";
+import { env, requireGitHub } from "@/lib/env";
 import { queue, type JobQueue } from "@/lib/queue";
 import { repoPort } from "./app";
 import { helpText, parseCommand, TRUSTED_ASSOCIATIONS } from "./commands";
@@ -153,7 +153,8 @@ async function handleIssueComment(payload: IssueCommentPayload, deps: WebhookDep
   if (payload.action !== "created" || !payload.issue.pull_request || !payload.installation) return;
   if (payload.comment.user.type === "Bot") return;
 
-  const { GITHUB_APP_SLUG: slug, APP_URL } = env();
+  const { APP_URL } = env();
+  const { slug } = requireGitHub();
   const command = parseCommand(payload.comment.body, slug);
   if (!command) return;
 
