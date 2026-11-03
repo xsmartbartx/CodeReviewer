@@ -137,3 +137,5 @@ Run the image twice, once with the default command and once with `node dist/work
 - **Backups.** Back up PostgreSQL daily. The database holds accounts, subscriptions mirrored from Stripe, and review metadata; no source code.
 - **Scaling.** Add worker processes when reviews queue up; reviews for the same pull request never run concurrently. The web tier is stateless.
 - **Upgrades.** Deploy the new image, run migrations, then restart web and worker. Migrations are additive within a release.
+
+The hosted instance at `codereviewer.onenexora.com` runs on the NEXORA host and is deployed, backed up and monitored with the NEXORA platform; see [nexora-integration.md](nexora-integration.md).
