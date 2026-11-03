@@ -5,19 +5,19 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { accounts, repositories } from "@/db/schema";
-import { currentUser } from "@/lib/auth/session";
-import { userCanAccess } from "@/lib/dashboard";
+import { currentViewer, isOrgAdmin } from "@/lib/auth/viewer";
+import { viewerCanAccess } from "@/lib/dashboard";
 import { githubApp } from "@/lib/github/app";
-import { unlink } from "@/lib/nexora/link";
+import { canLink, unlink } from "@/lib/nexora/link";
 
 export async function setRepositoryEnabled(formData: FormData) {
-  const user = await currentUser();
+  const viewer = await currentViewer();
   const repoId = String(formData.get("repoId") ?? "");
   const enabled = formData.get("enabled") === "true";
-  if (!user || !repoId) return;
+  if (!viewer || !/^[0-9a-f-]{36}$/i.test(repoId)) return;
 
   const [repo] = await db().select().from(repositories).where(eq(repositories.id, repoId));
-  if (!repo || !(await userCanAccess(user.id, repo.accountId))) return;
+  if (!repo || !(await viewerCanAccess(viewer, repo.accountId))) return;
 
   await db().update(repositories).set({ enabled }).where(eq(repositories.id, repo.id));
   revalidatePath("/dashboard", "layout");
@@ -25,9 +25,9 @@ export async function setRepositoryEnabled(formData: FormData) {
 
 /** Re-read the installation's repositories from GitHub, in case webhooks were missed. */
 export async function syncRepositories(formData: FormData) {
-  const user = await currentUser();
+  const viewer = await currentViewer();
   const accountId = String(formData.get("accountId") ?? "");
-  if (!user || !accountId || !(await userCanAccess(user.id, accountId))) return;
+  if (!viewer || !(await viewerCanAccess(viewer, accountId))) return;
 
   const [account] = await db().select().from(accounts).where(eq(accounts.id, accountId));
   if (!account?.installationId) return;
@@ -54,15 +54,19 @@ export async function syncRepositories(formData: FormData) {
   revalidatePath("/dashboard", "layout");
 }
 
-/** Stop billing an account through its NEXORA organisation. Same rule as linking (canLink). */
+/**
+ * Stop billing an account through its NEXORA organisation: whoever may link it (canLink), or an
+ * admin of the organisation it is linked to.
+ */
 export async function unlinkNexora(formData: FormData) {
-  const user = await currentUser();
+  const viewer = await currentViewer();
   const accountId = String(formData.get("accountId") ?? "");
-  if (!user || !accountId || !(await userCanAccess(user.id, accountId))) return;
+  if (!viewer || !(await viewerCanAccess(viewer, accountId))) return;
 
   const [account] = await db().select().from(accounts).where(eq(accounts.id, accountId));
   if (!account) return;
-  const done = await unlink(user, account);
+  const allowed = viewer.kind === "github" ? canLink(viewer.user, account) : isOrgAdmin(viewer);
+  const done = allowed && (await unlink(account, viewer.user));
   revalidatePath("/dashboard", "layout");
   redirect(`/dashboard/${account.login}/billing?link=${done ? "removed" : "forbidden"}`);
 }

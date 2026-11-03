@@ -1,6 +1,7 @@
 import { PricingCards } from "@/components/pricing";
 import { Button, Card, Meter, PageHeader } from "@/components/ui";
-import type { Account, User } from "@/db/schema";
+import type { Account } from "@/db/schema";
+import { isOrgAdmin, type Viewer } from "@/lib/auth/viewer";
 import { effectivePlan, PLANS } from "@/lib/billing/plans";
 import { requireAccount } from "@/lib/dashboard";
 import { billingEnabled, nexora, type NexoraConfig } from "@/lib/env";
@@ -31,7 +32,9 @@ const LINK_MESSAGES: Record<string, { tone: "ok" | "error"; text: string }> = {
 };
 
 export default async function BillingPage({ params, searchParams }: Props) {
-  const { user, account } = await requireAccount((await params).account);
+  const { viewer, account } = await requireAccount((await params).account);
+  // In an organisation, only its admins manage billing.
+  const manages = viewer.kind === "github" || isOrgAdmin(viewer);
   const { checkout, error, link } = await searchParams;
   const billing = billingEnabled();
   const nexoraConfig = nexora();
@@ -99,7 +102,7 @@ export default async function BillingPage({ params, searchParams }: Props) {
                   Renews {account.currentPeriodEnd.toLocaleDateString("en-US", { dateStyle: "long" })}
                 </p>
               )}
-              {billing && account.stripeCustomerId && (
+              {billing && manages && account.stripeCustomerId && (
                 <form action="/api/billing/portal" method="post" className="mt-4">
                   <input type="hidden" name="accountId" value={account.id} />
                   <Button variant="secondary">Manage billing and invoices</Button>
@@ -112,9 +115,9 @@ export default async function BillingPage({ params, searchParams }: Props) {
             </Card>
           </div>
 
-          {nexoraConfig && <NexoraBilling config={nexoraConfig} user={user} account={account} orgPlan={orgPlan} />}
+          {nexoraConfig && <NexoraBilling config={nexoraConfig} viewer={viewer} account={account} orgPlan={orgPlan} />}
 
-          {billing && !account.nexoraOrgId && (
+          {billing && manages && !account.nexoraOrgId && (
             <>
               <h2 className="mt-10 mb-6 font-semibold">Plans</h2>
               <PricingCards
@@ -159,16 +162,17 @@ export default async function BillingPage({ params, searchParams }: Props) {
 /** Billing through a NEXORA organisation: link, unlink, and where the plan is managed. */
 function NexoraBilling({
   config,
-  user,
+  viewer,
   account,
   orgPlan,
 }: {
   config: NexoraConfig;
-  user: User;
+  viewer: Viewer;
   account: Account;
   orgPlan: Account["plan"] | null;
 }) {
-  const allowed = canLink(user, account);
+  // Linking needs a GitHub sign-in by the owner or installer; an organisation admin may also unlink.
+  const allowed = viewer.kind === "github" ? canLink(viewer.user, account) : isOrgAdmin(viewer);
   const ownPaid = account.plan !== "free" && account.stripeSubscriptionId !== null;
   const start = `/api/auth/login?next=${encodeURIComponent(
     `/api/nexora/link/continue?account=${encodeURIComponent(account.login)}`,

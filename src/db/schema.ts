@@ -27,7 +27,10 @@ export const reviewTriggerEnum = pgEnum("review_trigger", ["auto", "command"]);
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
-  githubId: bigint("github_id", { mode: "number" }).notNull().unique(),
+  /** Set for people who signed in with GitHub; null for NEXORA (Clerk) sign-ins. */
+  githubId: bigint("github_id", { mode: "number" }).unique(),
+  /** Set for people who signed in with their NEXORA account. */
+  clerkUserId: text("clerk_user_id").unique(),
   login: text("login").notNull(),
   name: text("name"),
   email: text("email"),

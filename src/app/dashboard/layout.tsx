@@ -1,12 +1,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Logo } from "@/components/logo";
-import { requireUser } from "@/lib/dashboard";
+import { requireViewer } from "@/lib/dashboard";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const user = await requireUser();
+  const viewer = await requireViewer();
+  const { user } = viewer;
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
       <header className="border-b border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
@@ -27,6 +28,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
               <Image src={user.avatarUrl} alt="" width={28} height={28} className="rounded-full" unoptimized />
             )}
             <span className="hidden text-sm font-medium sm:inline">{user.login}</span>
+            {viewer.kind === "nexora" && (
+              <span className="hidden rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600 sm:inline dark:bg-zinc-800 dark:text-zinc-400">
+                NEXORA
+              </span>
+            )}
             <form action="/api/auth/logout" method="post">
               <button className="text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100">
                 Sign out

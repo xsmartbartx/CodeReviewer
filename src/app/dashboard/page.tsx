@@ -1,21 +1,54 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Badge, ButtonLink, Card, EmptyState, Meter, PageHeader } from "@/components/ui";
-import { accountsForUser, requireUser } from "@/lib/dashboard";
+import { accountsForViewer, requireViewer } from "@/lib/dashboard";
+import { clerk } from "@/lib/env";
 import { installUrl } from "@/lib/github/app";
 
 export const metadata = { title: "Dashboard" };
 
 export default async function DashboardPage() {
-  const user = await requireUser();
-  const rows = await accountsForUser(user.id);
+  const viewer = await requireViewer();
+  const rows = await accountsForViewer(viewer);
   const install = installUrl();
+
+  if (viewer.kind === "nexora" && rows.length === 0) {
+    const accountUrl = clerk()?.accountUrl ?? "";
+    return (
+      <>
+        <PageHeader title="Accounts" description="GitHub accounts linked to your NEXORA organisation." />
+        {viewer.orgId ? (
+          <EmptyState title="No GitHub accounts are linked to this organisation yet">
+            <p>
+              Install CodeReviewer on GitHub, then link the account to this organisation from its Billing page. Linking
+              needs a GitHub sign-in by the account&apos;s owner or by whoever installed the app, and an organisation
+              admin&apos;s confirmation in NEXORA Console.
+            </p>
+            <ButtonLink href={install} className="mt-6">
+              Install the GitHub App
+            </ButtonLink>
+          </EmptyState>
+        ) : (
+          <EmptyState title="Choose an organisation">
+            <p>CodeReviewer shows the GitHub accounts linked to your active NEXORA organisation.</p>
+            <a className="text-brand-600 mt-4 inline-block underline" href={`${accountUrl}/organizations`}>
+              Choose or create an organisation
+            </a>
+          </EmptyState>
+        )}
+      </>
+    );
+  }
 
   return (
     <>
       <PageHeader
         title="Accounts"
-        description="GitHub accounts and organizations where CodeReviewer is installed and you have access."
+        description={
+          viewer.kind === "nexora"
+            ? "GitHub accounts linked to your NEXORA organisation."
+            : "GitHub accounts and organizations where CodeReviewer is installed and you have access."
+        }
         action={
           <ButtonLink href={install} variant="secondary">
             Add an organization

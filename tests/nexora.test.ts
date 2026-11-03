@@ -344,13 +344,16 @@ describe("linking an account to an organisation", () => {
     expect(await completeLink(grant, nonce, installer)).toEqual({ ok: false, reason: "forbidden" });
   });
 
-  it("unlinks only for someone allowed to link", async () => {
+  it("unlinks a linked account (callers check who may; see nexora-signin.test.ts)", async () => {
     const installer = await insertUser(42);
-    const stranger = await insertUser(7);
     const account = await insertAccount({ installerGithubId: 42, nexoraOrgId: ORG, nexoraOrgName: "Acme" });
-    expect(await unlink(stranger, account)).toBe(false);
-    expect(await unlink(installer, account)).toBe(true);
+    expect(await unlink(account, installer)).toBe(true);
     expect((await database.select().from(accounts))[0]).toMatchObject({ nexoraOrgId: null, nexoraOrgName: null });
+    expect(await unlink({ ...account, nexoraOrgId: null }, installer)).toBe(false);
+  });
+
+  it("never lets a NEXORA sign-in (no GitHub id) pass as an unrecorded installer", () => {
+    expect(canLink({ githubId: null }, { githubAccountId: 10, installerGithubId: null })).toBe(false);
   });
 });
 
