@@ -29,6 +29,10 @@ const schema = z.object({
   STRIPE_PRICE_PRO: optional,
   STRIPE_PRICE_TEAM: optional,
 
+  // NEXORA Core billing (docs/nexora-integration.md). Off until the shared secret is set.
+  NEXORA_SYNC_SECRET: optional,
+  NEXORA_CONSOLE_URL: z.url().default("https://console.onenexora.com"),
+
   WORKER_CONCURRENCY: z.coerce.number().int().min(1).max(32).default(3),
 });
 
@@ -105,4 +109,17 @@ export function requireGitHub(e: Env = env()): GitHubConfig {
 /** Billing is on only when every Stripe variable is present. Self-hosters can leave it off. */
 export function billingEnabled(e: Env = env()): boolean {
   return Boolean(e.STRIPE_SECRET_KEY && e.STRIPE_WEBHOOK_SECRET && e.STRIPE_PRICE_PRO && e.STRIPE_PRICE_TEAM);
+}
+
+export type NexoraConfig = { syncSecret: string; consoleUrl: string };
+
+/** NEXORA Core billing: org plans pushed by Core and account linking. Null until the shared secret is set. */
+export function nexora(e: Env = env()): NexoraConfig | null {
+  if (!e.NEXORA_SYNC_SECRET) return null;
+  return { syncSecret: e.NEXORA_SYNC_SECRET, consoleUrl: e.NEXORA_CONSOLE_URL.replace(/\/$/, "") };
+}
+
+/** Plans and quotas apply when either CodeReviewer's own Stripe billing or NEXORA billing is on. */
+export function plansEnforced(e: Env = env()): boolean {
+  return billingEnabled(e) || nexora(e) !== null;
 }

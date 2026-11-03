@@ -76,6 +76,7 @@ stripe listen --forward-to localhost:3000/api/stripe/webhook
 | `ANTHROPIC_API_KEY` | For reviews | From step 3. The worker idles without it |
 | `ANTHROPIC_MODEL`, `ANTHROPIC_EFFORT` | No | Defaults `claude-opus-5-5`, `medium` |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_PRO`, `STRIPE_PRICE_TEAM` | For billing | All four, or none |
+| `NEXORA_SYNC_SECRET`, `NEXORA_CONSOLE_URL` | No | Only for the instance hosted on NEXORA; see [nexora-integration.md](nexora-integration.md) |
 | `WORKER_CONCURRENCY` | No | Reviews per worker process, default 3 |
 | `COMPANY_NAME`, `SUPPORT_EMAIL` | No | Shown on legal and docs pages. Email defaults to `support@<APP_URL host>` |
 

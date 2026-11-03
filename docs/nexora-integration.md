@@ -25,14 +25,23 @@ workflow (`/api/health`) and the Control Center, and runs it like its other prod
 | `NEXORA_SYNC_SECRET`  | CodeReviewer | Shared with Core's `CODEREVIEWER_SYNC_SECRET`. Turns phase 2 on          |
 | `NEXORA_CONSOLE_URL`  | CodeReviewer | Where the link flow sends an organisation admin. Default Console URL     |
 
-- `POST /api/internal/org-plan` receives an organisation's plan from Core. It is HMAC-signed with
-  a 5-minute replay window, idempotent, and ignores updates older than the stored one.
+- `POST /api/internal/org-plan` receives an organisation's plan from Core: body
+  `{"clerk_org_id", "plan_id", "as_of"}` (`as_of` is the Stripe event time in Unix seconds),
+  headers `X-Nexora-Timestamp` and `X-Nexora-Signature` = hex
+  `HMAC-SHA256(secret, "<timestamp>.<body>")`. It has a 5-minute replay window, is idempotent,
+  and ignores updates older than the stored one.
 - An account can be **linked** to a NEXORA organisation from its billing page. This needs a
-  fresh GitHub sign-in by the account's owner, or by the person who installed the app on it,
-  plus an organisation admin's confirmation in Console. Both are bound to one browser by a
-  single-use nonce.
+  fresh GitHub sign-in by the account's owner, or by the person who installed the app on it
+  (recorded from the `installation.created` webhook), plus an organisation admin's confirmation
+  in Console. Both are bound to one browser by a single-use nonce:
+  1. `/api/nexora/link/continue?account=<login>` creates the request and sends the browser to
+     `<NEXORA_CONSOLE_URL>/link/codereviewer?account=<id>&login=<login>&nonce=<nonce>`.
+  2. Console redirects to `/api/nexora/link/complete?grant=<base64url JSON>&ts=<t>&sig=<hex>`.
+     The JSON is `{org_id, org_name, account_id, nonce, plan_id}` and the signature is
+     `HMAC-SHA256(secret, "link.<t>.<JSON>")`, valid for 10 minutes.
 - The effective plan is the higher of the account's own subscription and its organisation's
-  plan. Quotas are still enforced here, from this database.
+  plan. Quotas are still enforced here, from this database. With `NEXORA_SYNC_SECRET` set, plans
+  apply even without CodeReviewer's own Stripe variables (unlinked accounts are then Free).
 - An unlinked account keeps CodeReviewer's own Stripe checkout and portal. The Stripe webhook
   ignores Core's subscriptions (those with `orgId` metadata), and Core ignores ours (`accountId`).
 - **Rollback:** unset `NEXORA_SYNC_SECRET`. The endpoint answers 404 and every account is back on

@@ -2,11 +2,13 @@
 
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { accounts, repositories } from "@/db/schema";
 import { currentUser } from "@/lib/auth/session";
 import { userCanAccess } from "@/lib/dashboard";
 import { githubApp } from "@/lib/github/app";
+import { unlink } from "@/lib/nexora/link";
 
 export async function setRepositoryEnabled(formData: FormData) {
   const user = await currentUser();
@@ -50,4 +52,17 @@ export async function syncRepositories(formData: FormData) {
     }
   }
   revalidatePath("/dashboard", "layout");
+}
+
+/** Stop billing an account through its NEXORA organisation. Same rule as linking (canLink). */
+export async function unlinkNexora(formData: FormData) {
+  const user = await currentUser();
+  const accountId = String(formData.get("accountId") ?? "");
+  if (!user || !accountId || !(await userCanAccess(user.id, accountId))) return;
+
+  const [account] = await db().select().from(accounts).where(eq(accounts.id, accountId));
+  if (!account) return;
+  const done = await unlink(user, account);
+  revalidatePath("/dashboard", "layout");
+  redirect(`/dashboard/${account.login}/billing?link=${done ? "removed" : "forbidden"}`);
 }

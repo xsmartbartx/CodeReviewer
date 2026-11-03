@@ -3,8 +3,8 @@ import { notFound, redirect } from "next/navigation";
 import { db } from "@/db";
 import { accounts, memberships, repositories, reviews, type Account, type User } from "@/db/schema";
 import { currentUser } from "@/lib/auth/session";
-import { effectivePlan } from "@/lib/billing/plans";
-import { billingEnabled } from "@/lib/env";
+import { plansEnforced } from "@/lib/env";
+import { accountPlan } from "@/lib/nexora/org-plans";
 import { reviewsUsed } from "@/lib/usage";
 
 export async function requireUser(next = "/dashboard"): Promise<User> {
@@ -20,11 +20,11 @@ export async function accountsForUser(userId: string) {
     .innerJoin(accounts, eq(accounts.id, memberships.accountId))
     .where(eq(memberships.userId, userId))
     .orderBy(asc(accounts.login));
-  const billing = billingEnabled();
+  const enforced = plansEnforced();
   return Promise.all(
     rows.map(async ({ account }) => ({
       account,
-      plan: effectivePlan(account, billing),
+      plan: await accountPlan(account, enforced),
       used: await reviewsUsed(account.id),
     })),
   );
@@ -40,16 +40,22 @@ export async function userCanAccess(userId: string, accountId: string): Promise<
   return Boolean(row);
 }
 
-export async function requireAccount(login: string): Promise<{ user: User; account: Account }> {
-  const user = await requireUser(`/dashboard/${login}`);
+/** The account with this login, if the user may see it. */
+export async function accountForUser(userId: string, login: string): Promise<Account | null> {
   const rows = await db()
     .select({ account: accounts })
     .from(memberships)
     .innerJoin(accounts, eq(accounts.id, memberships.accountId))
-    .where(and(eq(memberships.userId, user.id), sql`lower(${accounts.login}) = lower(${login})`))
+    .where(and(eq(memberships.userId, userId), sql`lower(${accounts.login}) = lower(${login})`))
     .limit(1);
-  if (!rows[0]) notFound();
-  return { user, account: rows[0].account };
+  return rows[0]?.account ?? null;
+}
+
+export async function requireAccount(login: string): Promise<{ user: User; account: Account }> {
+  const user = await requireUser(`/dashboard/${login}`);
+  const account = await accountForUser(user.id, login);
+  if (!account) notFound();
+  return { user, account };
 }
 
 export function reposForAccount(accountId: string) {

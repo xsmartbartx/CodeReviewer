@@ -49,22 +49,33 @@ export async function createSession(userId: string): Promise<{ token: string; ma
   return { token, maxAge };
 }
 
-export async function userForToken(token: string | undefined): Promise<User | null> {
+export type SignedInSession = { user: User; signedInAt: Date };
+
+export async function sessionForToken(token: string | undefined): Promise<SignedInSession | null> {
   if (!token) return null;
   const [row] = await db()
-    .select({ user: users })
+    .select({ user: users, signedInAt: sessions.createdAt })
     .from(sessions)
     .innerJoin(users, eq(users.id, sessions.userId))
     .where(and(eq(sessions.id, hashToken(token)), gt(sessions.expiresAt, new Date())))
     .limit(1);
-  return row?.user ?? null;
+  return row ?? null;
 }
 
-/** The signed-in user for this request, or null. Cached per request. */
-export const currentUser = cache(async (): Promise<User | null> => {
+export async function userForToken(token: string | undefined): Promise<User | null> {
+  return (await sessionForToken(token))?.user ?? null;
+}
+
+/** The signed-in session for this request, or null. Cached per request. */
+export const currentSession = cache(async (): Promise<SignedInSession | null> => {
   const store = await cookies();
-  return userForToken(store.get(SESSION_COOKIE)?.value);
+  return sessionForToken(store.get(SESSION_COOKIE)?.value);
 });
+
+/** The signed-in user for this request, or null. */
+export async function currentUser(): Promise<User | null> {
+  return (await currentSession())?.user ?? null;
+}
 
 export async function destroySession(token: string | undefined) {
   if (token)
