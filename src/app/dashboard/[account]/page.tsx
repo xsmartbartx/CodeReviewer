@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { FindingSummary, StatusBadge, timeAgo } from "@/components/review-ui";
 import { Badge, Button, ButtonLink, Card, EmptyState, Meter, PageHeader } from "@/components/ui";
-import { effectivePlan } from "@/lib/billing/plans";
 import { recentReviews, reposForAccount, requireAccount } from "@/lib/dashboard";
-import { billingEnabled, requireGitHub } from "@/lib/env";
+import { plansEnforced, requireGitHub } from "@/lib/env";
 import { installUrl } from "@/lib/github/app";
+import { accountPlan } from "@/lib/nexora/org-plans";
 import { reviewsUsed } from "@/lib/usage";
 import { setRepositoryEnabled, syncRepositories } from "../actions";
 import { AccountNav } from "./nav";
@@ -17,12 +17,12 @@ export async function generateMetadata({ params }: Props) {
 
 export default async function AccountPage({ params }: Props) {
   const { account } = await requireAccount((await params).account);
-  const [repos, reviews, used] = await Promise.all([
+  const [repos, reviews, used, plan] = await Promise.all([
     reposForAccount(account.id),
     recentReviews(account.id),
     reviewsUsed(account.id),
+    accountPlan(account),
   ]);
-  const plan = effectivePlan(account, billingEnabled());
   const enabledCount = repos.filter((r) => r.enabled).length;
 
   return (
@@ -54,7 +54,7 @@ export default async function AccountPage({ params }: Props) {
           <p className="mt-3 text-xs text-zinc-500">
             Resets on the 1st of each month (UTC). Skipped and failed reviews do not count.
           </p>
-          {billingEnabled() && plan.id !== "team" && (
+          {plansEnforced() && plan.id !== "team" && (
             <ButtonLink href={`/dashboard/${account.login}/billing`} className="mt-4 w-full">
               Upgrade
             </ButtonLink>

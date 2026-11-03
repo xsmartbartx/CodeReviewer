@@ -2,8 +2,9 @@ import { and, eq, gte } from "drizzle-orm";
 import { db } from "@/db";
 import { accounts, repositories, reviews } from "@/db/schema";
 import { effectivePlan, periodStart } from "@/lib/billing/plans";
-import { billingEnabled, env, requireGitHub } from "@/lib/env";
+import { env, plansEnforced, requireGitHub } from "@/lib/env";
 import { repoPort } from "@/lib/github/app";
+import { linkedOrgPlan } from "@/lib/nexora/org-plans";
 import type { GitHubPort } from "@/lib/github/port";
 import type { ReviewJob } from "@/lib/queue";
 import { runReview } from "@/lib/review/engine";
@@ -20,7 +21,7 @@ export type ProcessDeps = {
 export const defaultProcessDeps = (): ProcessDeps => ({
   portFor: repoPort,
   model: () => new ClaudeReviewModel(),
-  billing: billingEnabled(),
+  billing: plansEnforced(),
 });
 
 export type ProcessResult = { status: "ignored" | "quota" | "skipped" | "completed"; reviewId?: string };
@@ -38,7 +39,7 @@ export async function processReviewJob(
   }
 
   const github = await deps.portFor(job.installationId, job.owner, job.repo);
-  const plan = effectivePlan(account, deps.billing);
+  const plan = effectivePlan(account, deps.billing, await linkedOrgPlan(account));
 
   if ((await reviewsUsed(account.id)) >= plan.reviewsPerMonth) {
     // Tell the PR once per period instead of on every push.

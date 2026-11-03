@@ -60,14 +60,22 @@ export const accounts = pgTable(
     avatarUrl: text("avatar_url"),
     installationId: bigint("installation_id", { mode: "number" }).unique(),
     installationSuspended: boolean("installation_suspended").notNull().default(false),
+    /** GitHub user who installed the app here (the `installation.created` sender); may link it to a NEXORA organisation. */
+    installerGithubId: bigint("installer_github_id", { mode: "number" }),
     plan: planEnum("plan").notNull().default("free"),
     stripeCustomerId: text("stripe_customer_id").unique(),
     stripeSubscriptionId: text("stripe_subscription_id").unique(),
     subscriptionStatus: text("subscription_status"),
     currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
+    /** The NEXORA (Clerk) organisation this account is linked to; its Core plan then applies too. */
+    nexoraOrgId: text("nexora_org_id"),
+    nexoraOrgName: text("nexora_org_name"),
     ...timestamps,
   },
-  (t) => [index("accounts_login_lower_idx").on(sql`lower(${t.login})`)],
+  (t) => [
+    index("accounts_login_lower_idx").on(sql`lower(${t.login})`),
+    index("accounts_nexora_org_idx").on(t.nexoraOrgId),
+  ],
 );
 
 export const memberships = pgTable(
@@ -154,6 +162,39 @@ export const webhookDeliveries = pgTable(
     receivedAt: timestamp("received_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("webhook_deliveries_received_idx").on(t.receivedAt)],
+);
+
+/**
+ * The plan NEXORA Core says an organisation has for CodeReviewer, pushed by Core's Stripe
+ * webhook. Kept even before any account is linked, so a later link applies it at once.
+ * `asOf` is the Stripe event time; an older update than the stored one is ignored.
+ */
+export const nexoraOrgPlans = pgTable("nexora_org_plans", {
+  orgId: text("org_id").primaryKey(),
+  plan: planEnum("plan").notNull(),
+  asOf: timestamp("as_of", { withTimezone: true }).notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+/** A started link of an account to a NEXORA organisation, waiting for Console's grant. Single use. */
+export const nexoraLinkRequests = pgTable(
+  "nexora_link_requests",
+  {
+    // SHA-256 of the nonce held in the browser's cookie; the raw nonce is never stored.
+    id: text("id").primaryKey(),
+    accountId: uuid("account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("nexora_link_requests_expires_idx").on(t.expiresAt)],
 );
 
 export const stripeEvents = pgTable("stripe_events", {

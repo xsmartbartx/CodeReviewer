@@ -67,8 +67,20 @@ export async function createPortalUrl(account: Account): Promise<string> {
 
 const ENDED = new Set(["canceled", "incomplete_expired"]);
 
+/**
+ * Whether a subscription in the shared Stripe account is CodeReviewer's own. NEXORA Core's
+ * subscriptions carry `orgId` metadata and are billed through Core, which tells CodeReviewer the
+ * plan instead; other products' subscriptions use prices that are not ours.
+ */
+export function isOwnSubscription(subscription: Stripe.Subscription): boolean {
+  if (subscription.metadata?.orgId) return false;
+  if (subscription.metadata?.accountId) return true;
+  return planForPrice(subscription.items.data[0]?.price.id) !== null;
+}
+
 /** Mirror a Stripe subscription onto the account it belongs to. */
 export async function applySubscription(subscription: Stripe.Subscription) {
+  if (!isOwnSubscription(subscription)) return;
   const customerId = typeof subscription.customer === "string" ? subscription.customer : subscription.customer.id;
   const accountId = subscription.metadata?.accountId;
 
@@ -115,7 +127,8 @@ export async function handleStripeEvent(event: Stripe.Event) {
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object;
-        if (session.mode === "subscription" && session.subscription) {
+        // Only our own checkouts set client_reference_id; Core's and other products' sessions do not.
+        if (session.mode === "subscription" && session.subscription && session.client_reference_id) {
           const id = typeof session.subscription === "string" ? session.subscription : session.subscription.id;
           await applySubscription(await stripe().subscriptions.retrieve(id));
         }

@@ -65,17 +65,25 @@ export const SELF_HOSTED_PLAN: PlanDefinition = {
 };
 
 const ACTIVE_STATUSES = new Set(["active", "trialing", "past_due"]);
+const RANK: Record<Plan, number> = { free: 0, pro: 1, team: 2 };
 
-/** The plan an account is entitled to right now, accounting for lapsed subscriptions. */
+/**
+ * The plan an account is entitled to right now, accounting for lapsed subscriptions.
+ * `orgPlan` is the plan of the NEXORA organisation the account is linked to, already
+ * resolved by Core; the higher of the two applies, so linking never takes away a plan
+ * the account pays for itself.
+ */
 export function effectivePlan(
   account: { plan: Plan; subscriptionStatus: string | null },
   billing: boolean,
+  orgPlan: Plan | null = null,
 ): PlanDefinition {
   if (!billing) return SELF_HOSTED_PLAN;
-  if (account.plan === "free") return PLANS.free;
-  return account.subscriptionStatus && ACTIVE_STATUSES.has(account.subscriptionStatus)
-    ? PLANS[account.plan]
-    : PLANS.free;
+  const own =
+    account.plan !== "free" && account.subscriptionStatus && ACTIVE_STATUSES.has(account.subscriptionStatus)
+      ? account.plan
+      : "free";
+  return PLANS[orgPlan && RANK[orgPlan] > RANK[own] ? orgPlan : own];
 }
 
 /** Quotas reset on the first day of each calendar month (UTC). */

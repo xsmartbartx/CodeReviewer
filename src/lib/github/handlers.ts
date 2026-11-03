@@ -14,6 +14,8 @@ type InstallationPayload = {
   action: string;
   installation: { id: number; account: GitHubAccount | null; suspended_at?: string | null };
   repositories?: RepoRef[];
+  /** The GitHub user who performed the action; for `created`, who installed the app. */
+  sender?: { id: number };
 };
 
 type InstallationRepositoriesPayload = {
@@ -47,7 +49,12 @@ const defaultDeps = (): WebhookDeps => ({ queue: queue(), portFor: repoPort });
 
 const REVIEW_ACTIONS = new Set(["opened", "reopened", "synchronize", "ready_for_review"]);
 
-export async function upsertAccount(account: GitHubAccount, installationId: number | null, suspended = false) {
+export async function upsertAccount(
+  account: GitHubAccount,
+  installationId: number | null,
+  suspended = false,
+  installerGithubId?: number,
+) {
   const values = {
     githubAccountId: account.id,
     login: account.login,
@@ -55,6 +62,8 @@ export async function upsertAccount(account: GitHubAccount, installationId: numb
     avatarUrl: account.avatar_url ?? null,
     installationId,
     installationSuspended: suspended,
+    // Only a new installation says who installed it; other events leave the recorded installer alone.
+    ...(installerGithubId !== undefined ? { installerGithubId } : {}),
   };
   const [row] = await db()
     .insert(accounts)
@@ -89,7 +98,8 @@ async function handleInstallation(payload: InstallationPayload) {
     case "created":
     case "new_permissions_accepted":
     case "unsuspend": {
-      const account = await upsertAccount(installation.account, installation.id, false);
+      const installer = payload.action === "created" ? payload.sender?.id : undefined;
+      const account = await upsertAccount(installation.account, installation.id, false, installer);
       if (payload.repositories) await upsertRepos(account.id, payload.repositories);
       return;
     }
