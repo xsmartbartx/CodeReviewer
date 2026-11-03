@@ -1,0 +1,238 @@
+# CodeRabbit configuration for a mixed-stack monorepo
+# Target: TypeScript front end, Python services, Go workers, Terraform and Docker,
+# all in one repository with shared CI.
+# Docs: https://docs.coderabbit.ai/reference/configuration
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+
+language: "en-US"
+early_access: false
+
+tone_instructions: "Review as a staff engineer across the whole stack. Prioritize cross-boundary correctness, security and operational risk over language style."
+
+reviews:
+  profile: "chill"
+
+  # In a monorepo, a blocking reviewer is disruptive until the config is tuned.
+  # Keep this false for the first few weeks.
+  request_changes_workflow: false
+
+  high_level_summary: true
+  high_level_summary_in_walkthrough: false
+  collapse_walkthrough: true
+  changed_files_summary: true
+  sequence_diagrams: true
+  estimate_code_review_effort: true
+  assess_linked_issues: true
+  related_issues: true
+  related_prs: true
+  suggested_labels: true
+  suggested_reviewers: true
+
+  # Exclusions matter more than inclusions in a monorepo: generated code,
+  # vendored dependencies and lockfiles dominate the diff otherwise.
+  path_filters:
+    - "!**/node_modules/**"
+    - "!**/vendor/**"
+    - "!**/.venv/**"
+    - "!**/dist/**"
+    - "!**/build/**"
+    - "!**/.next/**"
+    - "!**/target/**"
+    - "!**/coverage/**"
+    - "!**/*.pb.go"
+    - "!**/*.generated.*"
+    - "!**/*.d.ts"
+    - "!**/*.min.*"
+    - "!**/testdata/**"
+    - "!**/snapshots/**"
+    - "!**/*.lock"
+    - "!pnpm-lock.yaml"
+    - "!package-lock.json"
+    - "!poetry.lock"
+    - "!uv.lock"
+    - "!go.sum"
+
+  path_instructions:
+    - path: "**/*.{ts,tsx}"
+      instructions: |
+        TypeScript:
+          - Flag `any` and information-losing `as` casts; prefer `unknown` plus narrowing.
+          - Flag floating promises and missing effect cleanup in React components.
+          - Validate every external payload with a schema at the boundary; types do not validate.
+    - path: "**/*.py"
+      instructions: |
+        Python:
+          - Flag bare and overly broad exception handling that hides failures.
+          - Require context managers for files, sessions and locks.
+          - Flag string-built SQL and `shell=True` subprocess calls.
+    - path: "**/*.go"
+      instructions: |
+        Go:
+          - Every error handled or explicitly ignored with a reason; require `%w` wrapping.
+          - Goroutines need an owner, a cancellation path and observable failure.
+          - Propagate `context.Context` as the first parameter.
+    - path: "**/*.{tf,tfvars}"
+      instructions: |
+        Terraform. This is the highest-blast-radius code in the repository:
+          - Flag resources that widen network exposure: `0.0.0.0/0` ingress, public buckets, permissive security groups.
+          - Flag IAM policies with wildcard actions or resources.
+          - Require encryption at rest and in transit where the provider supports it.
+          - Flag hardcoded secrets, account IDs and regions that belong in variables.
+          - Flag changes that force replacement of stateful resources without a note in the description.
+    - path: "**/Dockerfile*"
+      instructions: |
+        Container images:
+          - Flag `latest` and unpinned base image tags.
+          - Flag containers running as root when a non-root user would work.
+          - Flag secrets passed via build args or baked into layers.
+          - Prefer multi-stage builds; flag build toolchains shipped in the runtime image.
+    - path: ".github/workflows/**"
+      instructions: |
+        CI workflows are a supply-chain surface:
+          - Require actions pinned to a commit SHA, not a moving tag.
+          - Flag `pull_request_target` combined with checkout of untrusted refs.
+          - Flag secrets exposed to jobs that run untrusted code, and secrets echoed into logs.
+          - Require least-privilege `permissions` blocks.
+    - path: "**/*.{yaml,yml}"
+      instructions: |
+        Configuration and manifests:
+          - Flag committed credentials, tokens and private keys.
+          - Flag resource requests and limits that are missing on workloads.
+          - Check that changed defaults are reflected in the accompanying documentation.
+    - path: "**/*.{sql,prisma}"
+      instructions: |
+        Schema changes:
+          - Flag irreversible or locking migrations without a rollout plan.
+          - Check indexes on new foreign keys and filtered columns.
+    - path: "docs/**/*.md"
+      instructions: |
+        Documentation:
+          - Check that documented commands, paths and flags match the code in this pull request.
+          - Flag broken relative links and stale references to renamed files.
+
+  auto_review:
+    enabled: true
+    auto_incremental_review: true
+    # Long-lived release branches also get reviewed. Regex is accepted here.
+    base_branches:
+      - "main"
+      - "release/.*"
+    drafts: false
+    ignore_title_keywords:
+      - "wip"
+      - "do not review"
+    labels:
+      - "!skip-review"
+    # Pause after this many reviewed commits so a long-running branch does not
+    # consume the whole allowance. Set to 0 to disable pausing.
+    auto_pause_after_reviewed_commits: 10
+
+  labeling_instructions:
+    - label: "area/frontend"
+      instructions: "Apply when the pull request changes files under apps/web or packages/ui."
+    - label: "area/backend"
+      instructions: "Apply when the pull request changes Python or Go service code."
+    - label: "area/infra"
+      instructions: "Apply when the pull request changes Terraform, Dockerfiles, or CI workflows."
+    - label: "needs-migration-plan"
+      instructions: "Apply when the pull request changes database schema or migrations."
+
+  finishing_touches:
+    docstrings:
+      enabled: true
+    unit_tests:
+      enabled: true
+    simplify:
+      enabled: true
+
+  pre_merge_checks:
+    title:
+      mode: "warning"
+      requirements: "Conventional Commit style with a scope naming the affected package or service. Under 72 characters."
+    description:
+      mode: "warning"
+    issue_assessment:
+      mode: "warning"
+    docstrings:
+      mode: "off"
+    custom_checks:
+      - name: "Infrastructure changes need a rollout note"
+        mode: "warning"
+        instructions: |
+          Fail if the pull request changes files matching **/*.tf, **/Dockerfile*, or
+          .github/workflows/** and the description contains no rollout or rollback section.
+          Pass otherwise.
+      - name: "Cross-service contract change is documented"
+        mode: "warning"
+        instructions: |
+          Fail if the pull request changes a shared API schema, protobuf definition, or event
+          payload and does not update a file under docs/. Pass otherwise.
+
+  tools:
+    # JavaScript and TypeScript
+    eslint:
+      enabled: true
+    biome:
+      enabled: true
+    # Python
+    ruff:
+      enabled: true
+    # Go
+    golangci-lint:
+      enabled: true
+    buf:
+      enabled: true
+    # Infrastructure
+    checkov:
+      enabled: true
+    tflint:
+      enabled: true
+    hadolint:
+      enabled: true
+    actionlint:
+      enabled: true
+    zizmor:
+      enabled: true
+    # Security and secrets
+    gitleaks:
+      enabled: true
+    trufflehog:
+      enabled: true
+    semgrep:
+      enabled: true
+    trivy:
+      enabled: true
+    osvScanner:
+      enabled: true
+    # Data and config
+    sqlfluff:
+      enabled: true
+    yamllint:
+      enabled: true
+    shellcheck:
+      enabled: true
+    markdownlint:
+      enabled: true
+
+chat:
+  auto_reply: true
+
+knowledge_base:
+  learnings:
+    scope: "global"
+    # Give admins a day to reject a learning before it applies. 0 applies immediately.
+    approval_delay: 1
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      - "**/AGENTS.md"
+      - "**/CLAUDE.md"
+      - "docs/engineering-standards/**/*.md"
+      - files: "docs/engineering-standards/security/**/*.md"
+        applyTo: "**/*.{tf,yaml,yml}"
+  issues:
+    scope: "auto"
+  pull_requests:
+    scope: "auto"
+  web_search:
+    enabled: true

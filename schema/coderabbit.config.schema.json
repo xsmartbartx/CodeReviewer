@@ -1,0 +1,407 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/awesome-coderabbit/schema/coderabbit.config.schema.json",
+  "title": "CodeRabbit configuration (curated subset)",
+  "description": "A deliberately small JSON Schema for validating the .coderabbit.yaml examples in this repository. It covers the fields these examples use and rejects unknown keys, so typos fail fast in CI. It is NOT the authoritative CodeRabbit schema: for the complete field set, validate against https://coderabbit.ai/integrations/schema.v2.json and read https://docs.coderabbit.ai/reference/configuration.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "language": {
+      "description": "ISO language code for reviews and chat, for example 'en-US'. Default: en-US.",
+      "type": "string",
+      "pattern": "^[a-z]{2}(-[A-Z]{2})?$",
+      "examples": ["en", "en-US", "en-GB", "de-DE", "fr", "ja", "pl", "pt-BR", "zh-CN"]
+    },
+    "tone_instructions": {
+      "description": "Free-text steer for review voice. Upstream limit is 250 characters.",
+      "type": "string",
+      "maxLength": 250
+    },
+    "early_access": {
+      "description": "Opt into unreleased features. Default: false.",
+      "type": "boolean"
+    },
+    "enable_free_tier": {
+      "description": "Allow free-tier features for users without a paid seat. Default: true.",
+      "type": "boolean"
+    },
+    "inheritance": {
+      "description": "Merge unset values from the parent configuration level instead of using defaults. Default: false.",
+      "type": "boolean"
+    },
+    "reviews": { "$ref": "#/$defs/reviews" },
+    "chat": { "$ref": "#/$defs/chat" },
+    "knowledge_base": { "$ref": "#/$defs/knowledgeBase" }
+  },
+  "$defs": {
+    "enforcementMode": {
+      "description": "off disables the check, warning posts a warning, error requires resolution before merging.",
+      "type": "string",
+      "enum": ["off", "warning", "error"]
+    },
+    "scope": {
+      "description": "local = this repository, global = the organization, auto = local for public repos and global for private ones.",
+      "type": "string",
+      "enum": ["local", "global", "auto"]
+    },
+    "globList": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "toggle": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" }
+      }
+    },
+    "reviews": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "profile": {
+          "description": "quiet = only the most important findings, chill = balanced, assertive = everything including nits. Default: chill.",
+          "type": "string",
+          "enum": ["quiet", "chill", "assertive"]
+        },
+        "request_changes_workflow": {
+          "description": "Treat CodeRabbit as a blocking reviewer that approves once its threads are resolved and checks pass. Default: false.",
+          "type": "boolean"
+        },
+        "high_level_summary": { "type": "boolean" },
+        "high_level_summary_instructions": { "type": "string" },
+        "high_level_summary_placeholder": { "type": "string" },
+        "high_level_summary_in_walkthrough": { "type": "boolean" },
+        "auto_title_placeholder": { "type": "string" },
+        "auto_title_instructions": { "type": "string" },
+        "review_status": { "type": "boolean" },
+        "review_details": { "type": "boolean" },
+        "review_progress": { "type": "boolean" },
+        "commit_status": { "type": "boolean" },
+        "fail_commit_status": { "type": "boolean" },
+        "collapse_walkthrough": { "type": "boolean" },
+        "changed_files_summary": { "type": "boolean" },
+        "sequence_diagrams": { "type": "boolean" },
+        "estimate_code_review_effort": { "type": "boolean" },
+        "assess_linked_issues": { "type": "boolean" },
+        "related_issues": { "type": "boolean" },
+        "related_prs": { "type": "boolean" },
+        "suggested_labels": { "type": "boolean" },
+        "auto_apply_labels": { "type": "boolean" },
+        "suggested_reviewers": { "type": "boolean" },
+        "auto_assign_reviewers": { "type": "boolean" },
+        "in_progress_fortune": { "type": "boolean" },
+        "poem": { "type": "boolean" },
+        "enable_prompt_for_ai_agents": { "type": "boolean" },
+        "abort_on_close": { "type": "boolean" },
+        "disable_cache": { "type": "boolean" },
+        "path_filters": {
+          "description": "Glob patterns selecting reviewed files. A leading '!' excludes.",
+          "$ref": "#/$defs/globList"
+        },
+        "path_instructions": {
+          "description": "Review guidance scoped to a glob pattern.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "instructions"],
+            "properties": {
+              "path": { "type": "string", "minLength": 1 },
+              "instructions": { "type": "string", "minLength": 1, "maxLength": 20000 }
+            }
+          }
+        },
+        "labeling_instructions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["label", "instructions"],
+            "properties": {
+              "label": { "type": "string", "minLength": 1 },
+              "instructions": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "slop_detection": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "include_all_authors": { "type": "boolean" },
+            "label": { "type": "string", "minLength": 1 }
+          }
+        },
+        "auto_review": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "description_keyword": { "type": "string" },
+            "auto_incremental_review": { "type": "boolean" },
+            "auto_pause_after_reviewed_commits": {
+              "description": "Pause automatic reviews after this many reviewed commits. 0 disables pausing.",
+              "type": "integer",
+              "minimum": 0
+            },
+            "ignore_title_keywords": { "$ref": "#/$defs/globList" },
+            "labels": {
+              "description": "Label filters. A leading '!' excludes.",
+              "$ref": "#/$defs/globList"
+            },
+            "drafts": { "type": "boolean" },
+            "base_branches": {
+              "description": "Additional base branches to review. Regex patterns are accepted.",
+              "$ref": "#/$defs/globList"
+            },
+            "ignore_usernames": { "$ref": "#/$defs/globList" }
+          }
+        },
+        "finishing_touches": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "docstrings": { "$ref": "#/$defs/toggle" },
+            "unit_tests": { "$ref": "#/$defs/toggle" },
+            "simplify": { "$ref": "#/$defs/toggle" },
+            "autofix": { "$ref": "#/$defs/toggle" },
+            "fix_ci": { "$ref": "#/$defs/toggle" },
+            "resolve_merge_conflict": { "$ref": "#/$defs/toggle" },
+            "custom": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["name", "instructions"],
+                "properties": {
+                  "enabled": { "type": "boolean" },
+                  "name": { "type": "string", "minLength": 1 },
+                  "instructions": { "type": "string", "minLength": 1 }
+                }
+              }
+            }
+          }
+        },
+        "pre_merge_checks": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "override_requested_reviewers_only": { "type": "boolean" },
+            "docstrings": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "mode": { "$ref": "#/$defs/enforcementMode" },
+                "threshold": {
+                  "description": "Minimum docstring coverage percentage required to pass. Default: 80.",
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                }
+              }
+            },
+            "title": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "mode": { "$ref": "#/$defs/enforcementMode" },
+                "requirements": { "type": "string" }
+              }
+            },
+            "description": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "mode": { "$ref": "#/$defs/enforcementMode" }
+              }
+            },
+            "issue_assessment": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "mode": { "$ref": "#/$defs/enforcementMode" }
+              }
+            },
+            "custom_checks": {
+              "type": "array",
+              "maxItems": 50,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["name", "instructions"],
+                "properties": {
+                  "mode": { "$ref": "#/$defs/enforcementMode" },
+                  "name": { "type": "string", "minLength": 1, "maxLength": 50 },
+                  "instructions": { "type": "string", "minLength": 1, "maxLength": 10000 }
+                }
+              }
+            }
+          }
+        },
+        "post_merge_actions": {
+          "type": "array",
+          "maxItems": 5,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "prompt"],
+            "properties": {
+              "enabled": { "type": "boolean" },
+              "name": { "type": "string", "minLength": 1, "maxLength": 100 },
+              "prompt": { "type": "string", "minLength": 1, "maxLength": 10000 }
+            }
+          }
+        },
+        "tools": {
+          "description": "Static analyzers. Keys are upstream tool names, for example eslint, ruff, golangci-lint, semgrep. Values accept at least 'enabled'; some tools also accept 'config_file' or 'level'. Unknown keys are rejected here on purpose so a misspelled analyzer name fails validation.",
+          "type": "object",
+          "propertyNames": {
+            "enum": [
+              "actionlint",
+              "ast-grep",
+              "biome",
+              "blinter",
+              "brakeman",
+              "buf",
+              "checkmake",
+              "checkov",
+              "circleci",
+              "clang",
+              "clippy",
+              "cppcheck",
+              "detekt",
+              "dotenvLint",
+              "emberTemplateLint",
+              "eslint",
+              "fbinfer",
+              "flake8",
+              "fortitudeLint",
+              "github-checks",
+              "gitleaks",
+              "golangci-lint",
+              "hadolint",
+              "htmlhint",
+              "languagetool",
+              "luacheck",
+              "markdownlint",
+              "oasdiff",
+              "opengrep",
+              "osvScanner",
+              "oxc",
+              "phpcs",
+              "phpmd",
+              "phpstan",
+              "pmd",
+              "presidio",
+              "prismaLint",
+              "psscriptanalyzer",
+              "pylint",
+              "reactDoctor",
+              "regal",
+              "rubocop",
+              "ruff",
+              "semgrep",
+              "shellcheck",
+              "shopifyThemeCheck",
+              "skillspector",
+              "smartyLint",
+              "sqlfluff",
+              "squawk",
+              "stylelint",
+              "swiftlint",
+              "tflint",
+              "trivy",
+              "trufflehog",
+              "vale",
+              "verilator",
+              "yamllint",
+              "zizmor"
+            ]
+          },
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "enabled": { "type": "boolean" },
+              "config_file": { "type": "string", "minLength": 1 },
+              "level": { "type": "string", "minLength": 1 },
+              "rule_dirs": { "$ref": "#/$defs/globList" },
+              "util_dirs": { "$ref": "#/$defs/globList" },
+              "essential_rules": { "type": "boolean" },
+              "packages": { "$ref": "#/$defs/globList" }
+            }
+          }
+        }
+      }
+    },
+    "chat": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "auto_reply": { "type": "boolean" },
+        "art": { "type": "boolean" },
+        "allow_non_org_members": { "type": "boolean" }
+      }
+    },
+    "knowledgeBase": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "opt_out": {
+          "description": "Disable knowledge base features that require data retention, and delete stored data.",
+          "type": "boolean"
+        },
+        "web_search": { "$ref": "#/$defs/toggle" },
+        "code_guidelines": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "filePatterns": {
+              "description": "Guideline documents used as review criteria. Either a glob string, or an object pairing guideline files with the paths they apply to.",
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  { "type": "string", "minLength": 1 },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["files", "applyTo"],
+                    "properties": {
+                      "files": { "type": "string", "minLength": 1 },
+                      "applyTo": { "type": "string", "minLength": 1 }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "learnings": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "scope": { "$ref": "#/$defs/scope" },
+            "approval_delay": {
+              "description": "Days an admin has to approve or reject a learning. 0 applies it immediately.",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 30
+            }
+          }
+        },
+        "issues": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": { "scope": { "$ref": "#/$defs/scope" } }
+        },
+        "pull_requests": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": { "scope": { "$ref": "#/$defs/scope" } }
+        }
+      }
+    }
+  }
+}

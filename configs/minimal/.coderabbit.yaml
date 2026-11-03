@@ -1,0 +1,28 @@
+# Minimal CodeRabbit configuration
+# The smallest file worth committing. Everything else keeps its default.
+# Docs: https://docs.coderabbit.ai/reference/configuration
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+
+language: "en-US"
+
+reviews:
+  # "chill" is balanced. Use "quiet" for only the most important findings,
+  # "assertive" if your team wants everything, including nits.
+  profile: "chill"
+  high_level_summary: true
+
+  # Skip files that add review noise without adding signal.
+  path_filters:
+    - "!**/*.lock"
+    - "!**/*.min.*"
+    - "!**/dist/**"
+    - "!**/build/**"
+    - "!**/vendor/**"
+    - "!**/node_modules/**"
+
+  auto_review:
+    enabled: true
+    drafts: false
+
+chat:
+  auto_reply: true

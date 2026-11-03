@@ -1,0 +1,118 @@
+# CodeRabbit configuration for a JavaScript project
+# Target: Node.js services and browser bundles written in plain JS (ESM or CJS).
+# Docs: https://docs.coderabbit.ai/reference/configuration
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+
+language: "en-US"
+early_access: false
+
+tone_instructions: "Review as a senior JavaScript engineer. Be concise, cite the risk, and prefer one concrete fix over a list of options."
+
+reviews:
+  profile: "chill"
+
+  # Start advisory. Flip to true once the team trusts the signal, so CodeRabbit
+  # can auto-approve when its threads are resolved and checks pass.
+  request_changes_workflow: false
+
+  high_level_summary: true
+  collapse_walkthrough: true
+  sequence_diagrams: true
+  estimate_code_review_effort: true
+  assess_linked_issues: true
+
+  # Reviewed paths. Negations win, so build output and lockfiles stay out.
+  path_filters:
+    - "src/**"
+    - "lib/**"
+    - "server/**"
+    - "scripts/**"
+    - "!**/node_modules/**"
+    - "!**/dist/**"
+    - "!**/build/**"
+    - "!**/coverage/**"
+    - "!**/*.min.js"
+    - "!**/*.bundle.js"
+    - "!package-lock.json"
+    - "!pnpm-lock.yaml"
+    - "!yarn.lock"
+
+  path_instructions:
+    - path: "**/*.{js,mjs,cjs}"
+      instructions: |
+        Review this JavaScript with these priorities:
+          - Flag unhandled promise rejections and async functions whose errors can escape silently.
+          - Require `await` on every promise that is not deliberately fire-and-forget; if it is deliberate, ask for a comment saying so.
+          - Flag `==` where `===` is meant, and implicit coercion in conditionals that could surprise a reader.
+          - Reject `var`. Prefer `const`, then `let`.
+          - Flag mutation of function arguments and of exported module state.
+          - Point out blocking work on the event loop: synchronous fs calls, large JSON parses, unbounded loops in request handlers.
+          - Do not suggest adding TypeScript or type annotations to this codebase.
+    - path: "server/**/*.js"
+      instructions: |
+        This is server code. Additionally:
+          - Every route handler must validate and sanitize untrusted input before use.
+          - Flag string-concatenated SQL or shell commands; require parameterized queries and argument arrays.
+          - Flag secrets, tokens, and connection strings read from anywhere other than environment configuration.
+          - Ensure errors returned to clients do not leak stack traces or internal paths.
+    - path: "**/*.test.js"
+      instructions: |
+        Review tests for usefulness, not style:
+          - Each test should assert on behavior, not on implementation details.
+          - Flag tests with no assertions, and `it.only` / `describe.only` left behind.
+          - Flag fixed `setTimeout` waits; prefer deterministic waits or fake timers.
+    - path: "scripts/**"
+      instructions: |
+        Utility scripts. Keep the bar practical:
+          - Require a non-zero exit code on failure.
+          - Flag destructive operations that run without a confirmation flag or dry-run mode.
+
+  auto_review:
+    enabled: true
+    auto_incremental_review: true
+    drafts: false
+    ignore_title_keywords:
+      - "wip"
+      - "do not review"
+    labels:
+      - "!skip-review"
+
+  finishing_touches:
+    docstrings:
+      enabled: true
+    unit_tests:
+      enabled: true
+
+  pre_merge_checks:
+    title:
+      mode: "warning"
+      requirements: "Use Conventional Commit style, for example 'fix(api): reject empty payloads'. Keep it under 72 characters."
+    description:
+      mode: "warning"
+
+  tools:
+    eslint:
+      enabled: true
+    biome:
+      enabled: true
+    gitleaks:
+      enabled: true
+    semgrep:
+      enabled: true
+    actionlint:
+      enabled: true
+    markdownlint:
+      enabled: true
+
+chat:
+  auto_reply: true
+
+knowledge_base:
+  learnings:
+    scope: "auto"
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      - "**/AGENTS.md"
+      - "**/CONTRIBUTING.md"
+      - "docs/engineering-standards/**/*.md"
