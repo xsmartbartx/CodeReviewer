@@ -12,7 +12,7 @@ updates:
       # TypeScript 7 breaks lint. Lift this once eslint-config-next supports it.
       - dependency-name: typescript
         versions: [">=6.1.0"]
-      # Types must match the Node.js runtime (node:24 in the Dockerfile and CI).
+      # Types must match the Node.js runtime (node:26 in the Dockerfile and CI).
       # Bump this together with the runtime, not on its own.
       - dependency-name: "@types/node"
         update-types: [version-update:semver-major]

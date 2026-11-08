@@ -46,20 +46,20 @@
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.14",
     "@tailwindcss/postcss": "^4.3.4",
-    "@types/node": "^24.0.0",
+    "@types/node": "^26.6.6",
     "@types/pg": "^8.15.0",
     "@types/picomatch": "^4.0.0",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "drizzle-kit": "^0.31.11",
     "esbuild": "^0.28.2",
-    "eslint": "^9.39.0",
+    "eslint": "^10.14.0",
     "eslint-config-next": "16.4.4",
     "prettier": "^3.9.10",
     "prettier-plugin-tailwindcss": "^0.8.1",
     "tailwindcss": "^4.3.4",
     "tsx": "^4.23.15",
     "typescript": "5.9.3",
-    "vitest": "^4.0.5"
+    "vitest": "^5.1.0"
   }
 }
