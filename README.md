@@ -33,7 +33,7 @@ See [docs/architecture.md](docs/architecture.md) for the full design.
 
 ## Quick start (local development)
 
-Requirements: Node.js 22.12+, Docker, a GitHub account, and an Anthropic API key.
+Requirements: Node.js 22.13+, 24, or 26+ (26 recommended), Docker, a GitHub account, and an Anthropic API key.
 
 ```bash
 npm install
