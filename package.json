@@ -61,5 +61,11 @@
     "tsx": "^4.23.15",
     "typescript": "6.0.3",
     "vitest": "^5.1.0"
+  },
+  "overrides": {
+    "@esbuild-kit/core-utils": {
+      "esbuild": "^0.25.12"
+    },
+    "minimatch@^10": "^11.0.5"
   }
 }
